@@ -1,0 +1,72 @@
+<!-- templates/map.html -->
+<!DOCTYPE html>
+<html>
+<head>
+    <title>D3 Map</title>
+    <script src="https://d3js.org/d3.v6.min.js"></script>
+</head>
+<body>
+<script>
+const width = 960, height = 600;
+const projection = d3.geoNaturalEarth1().scale(width / 2 / Math.PI).translate([width / 2, height / 2]);
+const path = d3.geoPath().projection(projection);
+const svg = d3.select("body").append("svg").attr("width", width).attr("height", height);
+const firstGroupCountries = ["Nigeria", "Angola", "Algeria"];
+const secondGroupCountries = ["England", "France", "Kazakhstan"];
+const colorScale = d3.scaleOrdinal().domain(["First group", "Second group"]).range(["blue", "red"]);
+
+Promise.all([
+    d3.json("countries.geojson"),
+    d3.json("country_bounds.geojson")
+]).then(function([countries, boundaries]) {
+    svg.selectAll(".country")
+       .data(countries.features)
+       .enter().append("path")
+       .attr("d", path)
+       .attr("fill", d => firstGroupCountries.includes(d.properties.NAME) ? "blue" : secondGroupCountries.includes(d.properties.NAME) ? "red" : "#eeeeee")
+       .attr("stroke", "white")
+       .attr("stroke-width", 0.5);
+
+    svg.selectAll(".label")
+       .data(countries.features.filter(d => firstGroupCountries.concat(secondGroupCountries).includes(d.properties.NAME)))
+       .enter().append("text")
+       .attr("x", d => path.centroid(d)[0])
+       .attr("y", d => path.centroid(d)[1])
+       .style("font-family", "Arial")
+       .style("font-size", "4pt")
+       .style("text-anchor", "middle")
+       .text(d => d.properties.NAME);
+
+    svg.append("path")
+       .datum(boundaries)
+       .attr("d", path)
+       .attr("fill", "none")
+       .attr("stroke", "white")
+       .attr("stroke-width", 0.5);
+
+    const legend = svg.append("g").attr("transform", "translate(150,400)");
+
+    legend.selectAll("rect")
+          .data(colorScale.domain())
+          .enter().append("rect")
+          .attr("x", 0)
+          .attr("y", (d, i) => i * 11)
+          .attr("width", 8)
+          .attr("height", 8)
+          .attr("fill", colorScale);
+
+    legend.selectAll("text")
+          .data(colorScale.domain())
+          .enter().append("text")
+          .attr("x", 11)
+          .attr("y", (d, i) => i * 11 + 8)
+          .style("font-family", "Arial")
+          .style("font-size", "7pt")
+          .text(d => d);
+});
+
+
+
+</script>
+</body>
+</html>
