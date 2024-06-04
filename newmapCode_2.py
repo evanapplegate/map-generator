@@ -1,37 +1,40 @@
 import geopandas as gpd
-import matplotlib.pyplot as plt
 import pandas as pd
+import matplotlib.pyplot as plt
 
 plt.rcParams['pdf.fonttype'] = 42
 plt.rcParams['ps.fonttype'] = 42
 plt.rcParams['font.family'] = 'Arial'
 
-# Load data
-gdp_data = pd.read_excel('uploads/world_gdp.xlsx')
+# Read the data
 countries = gpd.read_file('map_data/countries.geojson')
-country_bounds = gpd.read_file('map_data/country_bounds.geojson')
+bounds = gpd.read_file('map_data/country_bounds.geojson')
+gdp_data = pd.read_excel('uploads/world_gdp.xlsx')
 
-# Merge GDP data with countries
+# Merge datasets
 countries = countries.merge(gdp_data, on='NAME', how='left')
 
-# Define color scheme
-color_scheme = ['#eeeeee', '#d9f0a3', '#addd8e', '#78c679', '#31a354', '#006837']
-classes = pd.qcut(countries['gdp_per_capita'].dropna(), 5, labels=False)
-colors = classes.map(lambda x: color_scheme[x + 1] if pd.notnull(x) else color_scheme[0])
-countries['color'] = colors
+# Define the colormap
+cmap = plt.get_cmap('Reds')
+countries['color'] = countries['gdp_per_capita'].apply(
+    lambda x: cmap(x / countries['gdp_per_capita'].max()) if pd.notnull(x) else '#eeeeee'
+)
 
 # Plot
-fig, ax = plt.subplots(figsize=(10, 10))
-countries.to_crs('ESRI:54030').plot(ax=ax, color=countries['color'], edgecolor='none')
-country_bounds.to_crs('ESRI:54030').plot(ax=ax, color='white', linewidth=0.5)
-plt.axis('off')
+fig, ax = plt.subplots(1, 1, figsize=(15, 10))
+ax.set_axis_off()
+countries = countries.to_crs('ESRI:54030')
+bounds = bounds.to_crs('ESRI:54030')
+countries.plot(ax=ax, color=countries['color'], edgecolor='white', linewidth=0.5)
+bounds.plot(ax=ax, color='white', linewidth=0.5)
 
-# Legend
-class_values = pd.qcut(countries['gdp_per_capita'].dropna(), 5).unique()
-class_colors = color_scheme[1:6]
-handles = [plt.Line2D([0], [0], marker='o', color='w', markerfacecolor=cl, markersize=10) for cl in class_colors]
-labels = [str(value) for value in class_values]
-plt.legend(handles, labels, title='GDP per capita 2022')
+# Colorbar
+sm = plt.cm.ScalarMappable(cmap=cmap, norm=plt.Normalize(vmin=countries['gdp_per_capita'].min(), 
+                                                         vmax=countries['gdp_per_capita'].max()))
+sm._A = []
+cbar = fig.colorbar(sm, ax=ax)
+cbar.set_label('GDP per Capita')
 
-plt.savefig('world_map.pdf', bbox_inches='tight')
-plt.savefig('world_map.png', bbox_inches='tight')
+# Save
+plt.savefig('map_output.png', bbox_inches='tight')
+plt.savefig('map_output.pdf', bbox_inches='tight')
