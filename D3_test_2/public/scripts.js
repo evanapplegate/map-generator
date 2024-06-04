@@ -32,7 +32,6 @@ document.addEventListener('DOMContentLoaded', function() {
             // You might want to add some visual feedback to indicate the selected color
         });
     });
-
     // Show the loading message when the form is submitted.
     document.getElementById('mapForm').addEventListener('submit', async function(event) {
         event.preventDefault();
@@ -61,6 +60,9 @@ document.addEventListener('DOMContentLoaded', function() {
           const result = await response.json();
           const d3Code = result.d3Code;
       
+          // Log the generated D3.js code for debugging
+          console.log('Generated D3.js code:', d3Code);
+      
           // Execute the D3.js code to render the SVG
           const script = new Function('d3', d3Code);
           script(d3); // Assuming d3 is globally available
@@ -73,6 +75,5 @@ document.addEventListener('DOMContentLoaded', function() {
           console.error('Failed to generate map:', error);
           document.getElementById('loadingMessage').style.display = 'none';
         }
-        ;
       });
 });

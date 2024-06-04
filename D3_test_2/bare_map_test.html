@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>D3 Map Test</title>
+        <script src="https://d3js.org/d3.v6.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+        <script src="https://unpkg.com/canvas2pdf@1.0.7/canvas2pdf.js"></script>
+    </head>
+    <body>
+        <div id="mapContainer"></div>
+        <script>
+            async function createMap() {
+                const width = 960, height = 600;
+        
+                const svg = d3.select("#mapContainer").append("svg")
+                    .attr("width", width)
+                    .attr("height", height);
+        
+                const projection = d3.geoEqualEarth()
+                    .rotate([-11.8, 0])  // Centering Sierra Leone
+                    .scale(160)
+                    .translate([width / 2, height / 2]);
+        
+                const path = d3.geoPath().projection(projection);
+        
+                try {
+                    const countries = await d3.json("map_data/countries.geojson");
+                    const boundaries = await d3.json("map_data/country_bounds.geojson");
+        
+                    svg.selectAll("path.countries")
+                        .data(countries.features)
+                        .enter().append("path")
+                        .attr("d", path)
+                        .attr("fill", d => d.properties.NAME === "Sierra Leone" ? "red" : "gray")
+                        .style("stroke", "white")
+                        .style("stroke-width", "1px")
+                        .attr("class", "countries");
+        
+                    svg.selectAll("path.borders")
+                        .data(boundaries.features)
+                        .enter().append("path")
+                        .attr("d", path)
+                        .style("stroke", "white")
+                        .style("stroke-width", "1px")
+                        .attr("class", "borders");
+        
+                    const serializedSVG = (new XMLSerializer).serializeToString(svg.node());
+                    
+                    console.log("pdf-lib:", window.PDFLib); // Should not be undefined
+                    
+                    const { PDFDocument, rgb } = window.PDFLib;
+                    const pdfDoc = await PDFDocument.create();
+                    const page = pdfDoc.addPage([width, height]);
+                    const { width: pageWidth, height: pageHeight } = page.getSize();
+                    
+                    // Create a canvas and draw the SVG onto it
+                    const canvas = document.createElement('canvas');
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    const img = new Image();
+                    img.onload = async () => {
+                        ctx.drawImage(img, 0, 0);
+                        
+                        // Use canvas2pdf to save the canvas as a PDF
+                        const pdfCtx = new canvas2pdf.PdfContext(page);
+                        pdfCtx.drawImage(canvas, 0, 0, pageWidth, pageHeight);
+                        pdfCtx.stream.end();
+                        
+                        const pdfBytes = await pdfDoc.save();
+                        const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+                        const url = URL.createObjectURL(blob);
+                        const link = document.createElement('a');
+                        link.href = url;
+                        link.download = 'map.pdf';
+                        link.click();
+                        console.log("PDF saved successfully");
+                    };
+                    img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(serializedSVG)));
+                    
+                    console.log("canvas2pdf function called");
+                            
+                    // Create a high-resolution PNG from the SVG
+                    const highResCanvas = document.createElement('canvas');
+                    highResCanvas.width = width * 2; // Increase resolution
+                    highResCanvas.height = height * 2;
+                    const highResCtx = highResCanvas.getContext('2d');
+                    const highResImg = new Image();
+                    highResImg.onload = () => {
+                        highResCtx.drawImage(highResImg, 0, 0, highResCanvas.width, highResCanvas.height);
+                        highResCanvas.toBlob(blob => {
+                            const url = URL.createObjectURL(blob);
+                            const link = document.createElement('a');
+                            link.download = 'map.png';
+                            link.href = url;
+                            link.click();
+                        }, 'image/png');
+                    };
+                    highResImg.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(serializedSVG)));
+        
+                } catch (error) {
+                    console.error('Error loading GeoJSON files:', error);
+                }
+            }
+        
+            createMap();
+        </script>
+    </body>
+</html>
