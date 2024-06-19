@@ -15,20 +15,17 @@ document.getElementById('mapperForm').addEventListener('submit', function(e) {
     .then(response => response.json())
     .then(data => {
       console.log('Map Script:', data.mapScript);
-    })
-    .catch(error => {
-      console.error('Error:', error);
-    });
-
-    .then(data => {
-      console.log('Map Script:', data.mapScript);
-      // Fetch the generated script
       fetch(data.filePath)
         .then(response => response.text())
         .then(scriptContent => {
           const scriptEl = document.createElement('script');
           scriptEl.textContent = scriptContent;
+          scriptEl.type = 'module';
           document.getElementById('scriptContainer').appendChild(scriptEl);
         });
     })
+    .catch(error => {
+      console.error('Error:', error);
+    });
+
 });

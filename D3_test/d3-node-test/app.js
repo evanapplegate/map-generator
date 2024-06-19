@@ -13,6 +13,7 @@ const upload = multer({ dest: 'uploads/' });
 
 app.use(express.json());
 app.use(express.static('public')); // Serve static files
+app.use('/generated_scripts', express.static('generated_scripts'));
 
 // Initialize OpenAI API client with your API key
 const openai = new OpenAI({
@@ -47,7 +48,7 @@ app.post('/generate-map', upload.single('file'), async (req, res) => {
       mapScript = mapScript.slice(prefix.length);
     }
     // Save to script.js with an index to prevent overwriting
-    const basePath = 'generated_scripts/script';
+    const basePath = 'generated_scripts/generated_script';
     const extension = '.js';
     let index = 0;
     let filePath = `${basePath}${index}${extension}`;
@@ -60,15 +61,12 @@ app.post('/generate-map', upload.single('file'), async (req, res) => {
 
     await fs.writeFile(filePath, mapScript);
     // Adjusted response to include the filePath
-    res.json({ message: `Map script saved successfully as ${filePath}.`, filePath: `/generated_scripts/script${index}.js` });
+    res.json({ message: `Map script saved successfully as ${filePath}.`, filePath: `/generated_scripts/generated_script${index}.js` });
   } catch (error) {
     console.error("Error calling OpenAI:", error);
     res.status(500).send("Failed to generate map");
   }
 });
-
-// Serve static files from 'generated_scripts' directory
-app.use('/generated_scripts', express.static('generated_scripts'));
 
 // Start the server
 app.listen(port, () => {
